@@ -1,0 +1,7 @@
+.env
+.botinfo
+firebase-key.json
+
+
+*__pycache__*
+env
