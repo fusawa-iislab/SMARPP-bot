@@ -12,14 +12,13 @@ class Slackbot:
         self.signing_secret = os.getenv("SIGNING_SECRET") or None
         self.verification_token = os.getenv("VERIFICATION_TOKEN") or None
         self.app_level_token = os.getenv("APP_LEVEL_TOKEN") or None
+        self.persona = ""
 
     @property
     def client(self):
         if not self.bot_user_oauth_token:
             raise ValueError("BOT_USER_OAUTH_TOKEN is not set in the environment variables.")
         return WebClient(token=self.bot_user_oauth_token)
-
-    # def response(self):
 
     def response(self, channel: str, text: str):
         if not self.client:
