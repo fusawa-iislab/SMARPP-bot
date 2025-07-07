@@ -18,22 +18,38 @@ slack_app = App(
     signing_secret=os.getenv("SIGNING_SECRET"),
 )
 
-p1.persona = "あなたは、会話相手の相談に乗るカウンセラーです。会話の流れに合うように応答してください"
-conversation_log = [
+persons = [
     {
-        "role" : "developer",
-        "content" : p1.persona
-    }
-    ,
-    {
-        "role": "user",
-        "content": "こんにちは、今日はどんなことを話しましょうか？"
+        "name": "p1",
+        "persona": "user同様の悩みを打ち明ける参加者",
     },
     {
-        "role": "assistant",
-        "content": "こんにちは！今日はどんなことを話したいですか？" 
+        "name": "p2",
+        "persona": "親身に相談に乗るカウンセラー",
     },
 ]
+
+def generate_developer_prompt(name: str, persona: str) -> str:
+    return {
+        "role": "developer", 
+        "content": (
+            "ここでは集団でのカウンセリングが行われています。" +
+            f"あなたは{persona}である{name}です。" +
+            "会話の流れに合うように応答してください。" +
+            "[]での人の名前を出さなくても大丈夫です。"
+        )
+    }
+
+def generate_conversation_log_item(name: str, content: str) -> dict:
+    return {
+        "role": "user",
+        "content": f"[{name}] {content}"
+    }
+
+
+## 0番目にはdeveloperのプロンプトを入れる
+conversation_log = [None]
+
 
 
 @slack_app.message("")
@@ -45,24 +61,18 @@ def handle_message_events(message, say, client):
     #     print(username)
     user_text = message.get('text', '')
     message_data = format_chatlog(message)
-    conversation_log.append(
-        {
-            "role": "user",
-            "content": user_text
-        }
-    )
+    conversation_log.append(generate_conversation_log_item("user", user_text))
     # save_chatlog(message_data)
-    response_text = get_response(conversation_log, model="gpt-4o")
-    response = p1.response(channel=message['channel'], text=response_text)
-    response_data = format_chatlog(response)
-    conversation_log.append(
-        {
-            "role": "assistant",
-            "content": response_text,
-        }
-    )
+    for person in persons:
+        conversation_log[0] = generate_developer_prompt(**person)
+        response_text = get_response(conversation_log, model="gpt-4o")
+        response = p1.response(channel=message['channel'], text=response_text)
+        response_data = format_chatlog(response)
+        conversation_log.append(generate_conversation_log_item(person['name'], response_text))
     # save_chatlog(response_data)
     logging.info(f"Message successfully processed")
+    print(conversation_log)
+
 
 
 if __name__ == "__main__":
