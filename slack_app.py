@@ -69,7 +69,7 @@ def handle_message_events(message, say, client):
         response = p1.response(channel=message['channel'], text=response_text)
         response_data = format_chatlog(response)
         conversation_log.append(generate_conversation_log_item(person['name'], response_text))
-    # save_chatlog(response_data)
+        # save_chatlog(response_data)
     logging.info(f"Message successfully processed")
     print(conversation_log)
 
