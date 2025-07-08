@@ -9,7 +9,9 @@ from utils import format_chatlog
 from Slackbot import Slackbot
 from firebase.models import save_chatlog
 
-p1 = Slackbot("./.botinfo/p1")
+peer_1 = Slackbot("./.botinfo/peer-1.json")
+faci_bot = Slackbot("./.botinfo/faci-bot.json")
+p1 = Slackbot("./.botinfo/p1.json")
 
 load_dotenv(dotenv_path="./.botinfo/test1")
 
@@ -18,23 +20,21 @@ slack_app = App(
     signing_secret=os.getenv("SIGNING_SECRET"),
 )
 
-persons = [
-    {
-        "name": "p1",
-        "persona": "user同様の悩みを打ち明ける参加者",
-    },
-    {
-        "name": "p2",
-        "persona": "親身に相談に乗るカウンセラー",
-    },
-]
+faci_bot.persona = "ファシリテーター"
+faci_bot.name = "ファシ田"
 
-def generate_developer_prompt(name: str, persona: str) -> str:
+peer_1.persona = "user同様の悩みを抱える参加者"
+peer_1.name = "参加者1"
+
+chatbots = [faci_bot, peer_1]
+
+
+def generate_developer_prompt(p: Slackbot) -> str:
     return {
         "role": "developer", 
         "content": (
             "ここでは集団でのカウンセリングが行われています。" +
-            f"あなたは{persona}である{name}です。" +
+            f"あなたは{p.persona}である{p.name}です。" +
             "会話の流れに合うように応答してください。" +
             "[]での人の名前を出さなくても大丈夫です。"
         )
@@ -52,8 +52,11 @@ conversation_log = [None]
 
 
 
-@slack_app.message("")
+@slack_app.event("message")
 def handle_message_events(message, say, client):
+    if message.get("bot_id"):
+        logging.info("Ignoring message from bot")
+        return
     # user_id = message.get("user")
     # user_info = client.users_info(user=user_id)
     # if user_info["ok"]:
@@ -63,15 +66,15 @@ def handle_message_events(message, say, client):
     message_data = format_chatlog(message)
     conversation_log.append(generate_conversation_log_item("user", user_text))
     # save_chatlog(message_data)
-    for person in persons:
-        conversation_log[0] = generate_developer_prompt(**person)
+    for chatbot in chatbots:
+        conversation_log[0] = generate_developer_prompt(chatbot)
         response_text = get_response(conversation_log, model="gpt-4o")
-        response = p1.response(channel=message['channel'], text=response_text)
+        response = chatbot.response(channel=message['channel'], text=response_text)
         response_data = format_chatlog(response)
-        conversation_log.append(generate_conversation_log_item(person['name'], response_text))
+        conversation_log.append(generate_conversation_log_item(chatbot.name, response_text))
         # save_chatlog(response_data)
     logging.info(f"Message successfully processed")
-    print(conversation_log)
+    # print(conversation_log)
 
 
 

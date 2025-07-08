@@ -1,18 +1,18 @@
-from dotenv import load_dotenv
-import os
 from slack_sdk import WebClient
-
+import json
 
 class Slackbot:
-    def __init__(self, filepath: str):
-        load_dotenv(dotenv_path=filepath)
-        self.bot_user_oauth_token = os.getenv("BOT_USER_OAUTH_TOKEN") or None
-        self.client_id = os.getenv("CLIENT_ID") or None
-        self.client_secret = os.getenv("CLIENT_SECRET") or None
-        self.signing_secret = os.getenv("SIGNING_SECRET") or None
-        self.verification_token = os.getenv("VERIFICATION_TOKEN") or None
-        self.app_level_token = os.getenv("APP_LEVEL_TOKEN") or None
+    def __init__(self, json_filepath: str):
+        with open(json_filepath, 'r') as file:
+            config = json.load(file)
+        self.bot_user_oauth_token = config.get("BOT_USER_OAUTH_TOKEN")
+        self.client_id = config.get("CLIENT_ID")
+        self.client_secret = config.get("CLIENT_SECRET")
+        self.signing_secret = config.get("SIGNING_SECRET")
+        self.verification_token = config.get("VERIFICATION_TOKEN")
+        self.app_level_token = config.get("APP_LEVEL_TOKEN")
         self.persona = ""
+        self.name = ""
 
     @property
     def client(self):
