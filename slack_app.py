@@ -23,6 +23,7 @@ slack_app = App(
 
 faci_bot.persona = "ファシリテーター"
 faci_bot.name = "ファシ田"
+faci_bot.is_facilitator = True
 
 peer_1.persona = "user同様の悩みを抱える参加者"
 peer_1.name = "参加者1"
@@ -34,17 +35,30 @@ chatbots = [faci_bot, peer_1]
 def generate_enviroment_prompt(username: str ,chatbots: Sequence[Slackbot]) -> str:
     person_name_list = [username] + [bot.name for bot in chatbots]
     person_names = ", ".join(person_name_list)
+
     return (
-        "ここでは集団でのカウンセリングが行われています。"+
+        "ここでは集団でのカウンセリングが行われています。"
         f"参加者は{person_names}で、ファシリテータは{faci_bot.name}です。\n" 
     )
 
 def generate_personal_prompt(p: Slackbot) -> str:
+    personal_text = f"あなたは{p.persona}である{p.name}です。\n" 
+    if p.is_facilitator:
+        personal_text += (
+            "あなたはファシリテーターとして、以下の流れに沿ってセッションを進めていきます\n"
+            "その流れの中で特に深掘った方がいいことや悩みの相談は特に聞くこと\n"
+            "セッションの流れ:\n"
+            "1. 参加者の最近の様子を聞く/薬物使用状況や生活の悩み、よかったこと\n"
+            "2. 今後直近の生活をどうしていきたいか\n"
+            "\n"
+        )
+    situational_text = (
+        "会話の流れに合うように応答してください。\n" 
+        "注意事項:\n" 
+        "[]での人の名前を出さないでください。\n"
+    )
     return (
-        f"あなたは{p.persona}である{p.name}です。" +
-        "会話の流れに合うように応答してください。\n" +
-        "注意事項:\n" +
-        "[]での人の名前を出さないでください。"
+        personal_text + situational_text
     )
 
 def generate_developer_prompt(username: str,chatbot: Slackbot) -> dict:
@@ -60,6 +74,7 @@ def generate_user_prompt(chatlog) -> dict:
     return {
         "role": "user",
         "content": (
+            "以下の会話の流れに沿うように応答してください\n" +
             "会話の流れ:\n" +
             f"{chatlog}\n"
         )

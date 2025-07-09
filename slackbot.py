@@ -13,6 +13,7 @@ class Slackbot:
         self.app_level_token = config.get("APP_LEVEL_TOKEN")
         self.persona = ""
         self.name = ""
+        self.is_facilitator = False
 
     @property
     def client(self):
