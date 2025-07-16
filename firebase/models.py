@@ -2,6 +2,8 @@ from firebase.db import db
 from pydantic import BaseModel, ValidationError
 import logging
 
+TABLE_NAMES = ["smarppbot_chatlog"]
+
 class Chatlog(BaseModel):
     content: str
     timestamp: str
