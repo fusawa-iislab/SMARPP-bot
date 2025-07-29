@@ -7,10 +7,10 @@ from Slackbot import Slackbot
 def chatlog_prompt(chatdatas: Sequence[ChatData]) -> str:
     return "\n".join(f"[{chatdata.name}] {chatdata.content}" for chatdata in chatdatas)
 
-def environment_prompt(user_name: str, chatbots: Sequence[Slackbot]) -> str:
-    person_name_list = [user_name] + [bot.name for bot in chatbots]
+def environment_prompt(user_name: str, chatbots: dict[str, Slackbot]) -> str:
+    person_name_list = [user_name] + [bot.name for bot in chatbots.values()]
     person_names = ", ".join(person_name_list)
-    faci_bot = next((bot for bot in chatbots if bot.is_facilitator), None)
+    faci_bot = next((bot for bot in chatbots.values() if bot.is_facilitator), None)
     return (
         "ここでは集団でのカウンセリングが行われています。"
         f"参加者は{person_names}で、ファシリテータは{faci_bot.name}です。\n"
@@ -29,7 +29,7 @@ def personality_prompt(p: Slackbot) -> str:
         )
     return personal_text
 
-def user_prompt(chatroom: ChatRoom, p: Slackbot, username: str) -> str:
+def user_prompt(chatroom: ChatRoom, p: Slackbot, username: str, additional_prompt: str | None = None) -> str:
     return (
         f"{environment_prompt(username, chatroom.chatbots)}"
         f"これまでの会話の流れ: \n"
@@ -37,12 +37,13 @@ def user_prompt(chatroom: ChatRoom, p: Slackbot, username: str) -> str:
         f"{personality_prompt(p)}"
         "これまでの会話の流れに沿って応答してください。\n"
         "※人の名前が書いてある[]は出さないでください\n"
+        f"{additional_prompt}\n"
     )
 
-def create_prompt(chatroom: ChatRoom, p: Slackbot, username: str):
+def create_prompt(chatroom: ChatRoom, p: Slackbot, username: str, additional_prompt: str | None = None):
     return [
         {
             "role": "user",
-            "content": user_prompt(chatroom, p, username)
+            "content": user_prompt(chatroom, p, username, additional_prompt)
         }
     ]

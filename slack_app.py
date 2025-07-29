@@ -44,15 +44,17 @@ def get_chatbots():
     peer_1.persona = "user同様の悩みを抱える参加者"
     peer_1.name = "参加者1"
 
-    return [faci_bot, peer_1]
+    return {
+        "faci_bot": faci_bot,
+        "peer_1": peer_1,
+    }
 
 
 def create_slack_app(token: str, signing_secret: str) :
     app = App(token=token, signing_secret=signing_secret)
     username = "yugo"
-    chatroom = ChatRoom()
+    app.chatrooms = []
     app.chatbots = get_chatbots()
-    chatroom.chatbots = app.chatbots
 
     @app.event("message")
     def handle_message_events(message, say, client):
@@ -60,17 +62,44 @@ def create_slack_app(token: str, signing_secret: str) :
             logging.info("Ignoring message from bot")
             return
         user_text = message.get('text', '')
-        chatroom.add_chatdata(username, user_text)
-        message_data = format_chatlog(message)
-        # save_chatlog(message_data)
-
-        for chatbot in app.chatbots:
-            prompt = create_prompt(chatroom, chatbot, username)
+        chatroom = next((chatroom for chatroom in app.chatrooms if chatroom.channel_id == message['channel']), None)
+        if chatroom is None:
+            chatroom = ChatRoom(message['channel'], chatbots=app.chatbots)
+            app.chatrooms.append(chatroom)
+        if user_text in ["start", "スタート"]:
+            if chatroom.is_active:
+                say("すでにセッションが開始されています。")
+                return
+            chatroom.is_active = True
+            say("セッションを開始します。")
+            prompt = create_prompt(chatroom, app.chatbots["faci_bot"], username, "セッションが開始されたので、セッションの流れを開始してください。初めはuserに話を振ってください")
             response_text = get_response(prompt, model="gpt-4o")
-            response = chatbot.response(channel=message['channel'], text=response_text)
-            chatroom.add_chatdata(chatbot.name, response_text)
+            response = app.chatbots["faci_bot"].response(channel=message['channel'], text=response_text)
+            chatroom.add_chatdata(app.chatbots["faci_bot"].name, response_text)
             response_data = format_chatlog(response)
             # save_chatlog(response_data)
+
+        elif user_text in ["end", "終了"]:
+            if not chatroom.is_active:
+                say("セッションが開始されていません。")
+                return
+            chatroom.is_active = False
+            say("セッションを終了します。")
+        elif not chatroom.is_active:
+            say("セッションが開始されていません。開始するには「start」と入力してください。")
+            return
+        else:
+            chatroom.add_chatdata(username, user_text)
+            message_data = format_chatlog(message)
+            # save_chatlog(message_data)
+
+            for chatbot in app.chatbots.values():
+                prompt = create_prompt(chatroom, chatbot, username)
+                response_text = get_response(prompt, model="gpt-4o")
+                response = chatbot.response(channel=message['channel'], text=response_text)
+                chatroom.add_chatdata(chatbot.name, response_text)
+                response_data = format_chatlog(response)
+                # save_chatlog(response_data)
 
         logging.info("Message successfully processed")
 
